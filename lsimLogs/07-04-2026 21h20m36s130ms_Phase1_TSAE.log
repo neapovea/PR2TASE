@@ -1,0 +1,4 @@
+07-04-2026 21:20:36:152 Phase1_TSAE [TRACE] : Updating the TimestampVectorInserting with the timestamp: localhost:9000:   0
+07-04-2026 21:20:39:097 Phase1_TSAE [TRACE] : Updating the TimestampVectorInserting with the timestamp: localhost:9000:   1
+07-04-2026 21:20:45:420 Phase1_TSAE [TRACE] : Updating the TimestampVectorInserting with the timestamp: localhost:9000:   2
+07-04-2026 21:21:02:991 Phase1_TSAE [TRACE] : Updating the TimestampVectorInserting with the timestamp: localhost:9000:   3
