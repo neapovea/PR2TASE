@@ -21,10 +21,7 @@
 package recipes_service.tsae.data_structures;
 
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Iterator;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import edu.uoc.dpcs.lsim.logger.LoggerManager.Level;
@@ -51,16 +48,26 @@ public class TimestampMatrix implements Serializable{
 	 * @return the timestamp vector of node in this timestamp matrix
 	 */
 	TimestampVector getTimestampVector(String node){
-		
-		// return generated automatically. Remove it when implementing your solution 
-		return null;
+			return timestampMatrix.get(node);
 	}
 	
 	/**
 	 * Merges two timestamp matrix taking the elementwise maximum
 	 * @param tsMatrix
 	 */
-	public void updateMax(TimestampMatrix tsMatrix){
+	public synchronized void updateMax(TimestampMatrix tsMatrix){
+		// For each node in the matrix being merged
+		for (String node : tsMatrix.timestampMatrix.keySet()) {
+			// Get or create timestamp vector for this node
+			TimestampVector currentVector = timestampMatrix.get(node);
+			if (currentVector == null) {
+				currentVector = new TimestampVector(new ArrayList<>(timestampMatrix.keySet()));
+				timestampMatrix.put(node, currentVector);
+			}
+
+			// Update with max values from other matrix's vector
+			currentVector.updateMax(tsMatrix.getTimestampVector(node));
+		}
 	}
 	
 	/**
@@ -68,7 +75,8 @@ public class TimestampMatrix implements Serializable{
 	 * @param node
 	 * @param tsVector
 	 */
-	public void update(String node, TimestampVector tsVector){
+	public synchronized void update(String node, TimestampVector tsVector){
+		timestampMatrix.put(node, tsVector);
 	}
 	
 	/**
@@ -76,29 +84,55 @@ public class TimestampMatrix implements Serializable{
 	 * @return a timestamp vector containing, for each node, 
 	 * the timestamp known by all participants
 	 */
-	public TimestampVector minTimestampVector(){
+	public synchronized TimestampVector minTimestampVector(){
 
-		// return generated automatically. Remove it when implementing your solution 
-		return null;
+		// Si esta vacio devuelvo null
+		if (timestampMatrix.isEmpty()) {
+			return null;
+		}
+
+		// Crear vector con todos los datos
+		TimestampVector minVector = new TimestampVector(new ArrayList<>(timestampMatrix.keySet()));
+
+		boolean first = true;
+		for (TimestampVector vector : timestampMatrix.values()) {
+			if (first) {
+				// La primera vez inicia vector
+				for (String participant : vector.getTimestamps().keySet()) {
+					minVector.update(participant, vector.getLast(participant));
+				}
+				first = false;
+			} else {
+				// Coger el valor mínimo
+				minVector.mergeMin(vector);
+			}
+		}
+
+		return minVector;
 	}
 	
 	/**
 	 * clone
 	 */
-	public TimestampMatrix clone(){
+	public synchronized TimestampMatrix clone(){
 
-		// return generated automatically. Remove it when implementing your solution 
-		return null;
+		TimestampMatrix clonedMatrix = new TimestampMatrix(new ArrayList<>(timestampMatrix.keySet()));
+		for (String node : timestampMatrix.keySet()) {
+			clonedMatrix.timestampMatrix.put(node, timestampMatrix.get(node).clone());
+		}
+		return clonedMatrix;
 	}
 	
 	/**
 	 * equals
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public synchronized boolean equals(Object obj) {
 
-		// return generated automatically. Remove it when implementing your solution 
-		return false;
+		if (this == obj) return true;
+		if (obj == null || getClass() != obj.getClass()) return false;
+		TimestampMatrix other = (TimestampMatrix) obj;
+		return timestampMatrix.equals(other.timestampMatrix);
 	}
 
 	

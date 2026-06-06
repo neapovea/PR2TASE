@@ -93,6 +93,23 @@ public class TimestampVector implements Serializable{
 		});
 
 	}
+
+	/**
+	 * Actualizar timestamp de un participant especifico
+	 */
+	public void update(String participant, Timestamp timestamp) {
+		if (participant == null || timestamp == null) {
+			return;
+		}
+		timestampVector.put(participant, timestamp);
+	}
+
+	/**
+	 * Devuelve el ConcurrentHashMap con todos los timestamps
+	 */
+	public ConcurrentHashMap<String, Timestamp> getTimestamps() {
+		return timestampVector;
+	}
 	
 	/**
 	 * merge in another vector, taking the elementwise maximum

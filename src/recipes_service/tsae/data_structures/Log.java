@@ -126,8 +126,50 @@ public class Log implements Serializable{
 	 * ackSummary. 
 	 * @param ack: ackSummary.
 	 */
-	public void purgeLog(TimestampMatrix ack){
-		System.err.println("Error: purgeLog method (Log) not yet implemented");
+	public synchronized void purgeLog(TimestampMatrix ack){
+
+		if (ack == null) return;
+
+		// Get minimum timestamp vector from ack matrix
+		TimestampVector minTimestampVector = ack.minTimestampVector();
+		if (minTimestampVector == null) return;
+
+		// For each host's operation list in the log
+		for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
+			String hostId = entry.getKey();
+			CopyOnWriteArrayList<Operation> operations = entry.getValue();
+
+			// Remove operations that have been acknowledged by all participants
+			operations.removeIf(op -> {
+				String opHostId = op.getTimestamp().getHostid();
+				Timestamp minAck = minTimestampVector.getLast(opHostId);
+				return minAck != null && op.getTimestamp().compare(minAck) <= 0;
+			});
+		}
+
+	}
+
+	/**
+	 * Checks if the log contains an operation with the given timestamp.
+	 *
+	 * @param timestamp the timestamp to check for.
+	 * @return true if the log contains an operation with the given timestamp, false otherwise.
+	 */
+	public boolean contains(Timestamp timestamp) {
+		if (timestamp == null) {
+			return false; // Return false if timestamp is null
+		}
+
+		// Iterate over each host's operation list in the log
+		for (CopyOnWriteArrayList<Operation> operations : log.values()) {
+			// Check if any operation matches the given timestamp
+			for (Operation operation : operations) {
+				if (operation.getTimestamp().equals(timestamp)) {
+					return true; // Return true if a match is found
+				}
+			}
+		}
+		return false; // Return false if no match is found
 	}
 
 	/**

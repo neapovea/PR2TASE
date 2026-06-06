@@ -286,6 +286,8 @@ public class ServerData {
 			}
 			// Actualizar vector local para reflejar que conocemos esta novedad
 			summary.updateTimestamp(op.getTimestamp());
+			// Update the acknowledgment matrix with the current summary
+			ack.update(id, summary);
 		}
 	}
 
