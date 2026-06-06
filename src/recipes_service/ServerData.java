@@ -166,7 +166,7 @@ public class ServerData {
 		Recipe rcpe = new Recipe(recipeTitle, recipe, id, timestamp);
 		Operation addOps = new AddOperation(rcpe, timestamp);
 		//invocamos función para realizar las actualizaciones y operaciones necesarias
-		this.integrateOperation(addOps);
+		this.integrateOperation(addOps,false);
 
 		LSimLogger.log(Level.TRACE, "[ServerData] [session: "+this.currentSessionNumber+" ] Recipe " + recipeTitle + " added to local storage and log.");
 
@@ -184,7 +184,7 @@ public class ServerData {
 			// Esto sirve para recordar que la borramos y evitar que otro servidor nos la devuelva por error.
 			tombstones.add(removedRecipe.getTimestamp());
 			//invocamos función para realizar las actualizaciones y operaciones necesarias
-			this.integrateOperation(removeOps);
+			this.integrateOperation(removeOps, false);
 			LSimLogger.log(Level.TRACE, "[ServerData] [session: "+this.currentSessionNumber+"  ] removeRecipe method: " + recipeTitle);
 		} else {
 			LSimLogger.log(Level.TRACE, "[ServerData] [session: "+this.currentSessionNumber+"  ] Try to remove null recipe: " + recipeTitle);
@@ -204,6 +204,7 @@ public class ServerData {
 			}
 		}
 		tombstones = newTombstones;
+
 	}
 
 
@@ -295,7 +296,7 @@ public class ServerData {
 	 * recibida, actualizando BBDD, Log y Vector.
 	 */
 
-	public synchronized void integrateOperation(Operation op) {
+	public synchronized void integrateOperation(Operation op, boolean updateAck) {
 		// Añadir al log de mensajes para propagación
 		boolean addedToLog = log.add(op);
 
@@ -306,7 +307,8 @@ public class ServerData {
 			// Actualizar vector local para reflejar que conocemos esta novedad
 			summary.updateTimestamp(op.getTimestamp());
 			// Actualizar ack con el sumary actual
-			ack.update(id, summary);
+			if (updateAck) {
+				ack.update(id, summary);}
 			synchronized (tombstones) {
 				if (op instanceof AddOperation addOp) {
 					if (tombstones.contains(addOp.getRecipe().getTimestamp())) {

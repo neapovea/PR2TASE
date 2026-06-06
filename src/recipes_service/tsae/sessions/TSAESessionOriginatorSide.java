@@ -143,8 +143,7 @@ public class TSAESessionOriginatorSide extends TimerTask{
 			// Registrar operaciones de manera atómica (bloqueando serverData)
 			synchronized (serverData) {
 				for(Operation op : incomingOps) {
-					serverData.integrateOperation(op);
-					//serverData.getAck().update(serverData.getId(), serverData.getSummary());
+					serverData.integrateOperation(op,true);
 				}
 			}
 
@@ -189,7 +188,6 @@ public class TSAESessionOriginatorSide extends TimerTask{
 						// Actualizar summary y acknowledgment local con datos del partner
 						serverData.getSummary().updateMax(partnerSummary);
 						serverData.getAck().updateMax(partnerAck);
-						serverData.getAck().update(serverData.getId(), serverData.getSummary());
 						// Purgar log y tombstones
 						serverData.getLog().purgeLog(serverData.getAck());
 						serverData.purgeTombstones();
