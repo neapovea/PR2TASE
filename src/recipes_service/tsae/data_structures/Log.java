@@ -21,12 +21,12 @@
 package recipes_service.tsae.data_structures;
 
 import java.io.Serializable;
-import java.util.Enumeration;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Vector;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 import recipes_service.data.Operation;
 //LSim logging system imports sgeag@2017
@@ -53,12 +53,14 @@ public class Log implements Serializable{
 	 * that stores a list of operations for each member of 
 	 * the group.
 	 */
-	private ConcurrentHashMap<String, List<Operation>> log= new ConcurrentHashMap<String, List<Operation>>();  
+	private final ConcurrentHashMap<String, CopyOnWriteArrayList<Operation>> log = new ConcurrentHashMap<>();
+//	private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
 
 	public Log(List<String> participants){
 		// create an empty log
-		for (Iterator<String> it = participants.iterator(); it.hasNext(); ){
-			log.put(it.next(), new Vector<Operation>());
+		for (String participant : participants) {
+			log.put(participant, new CopyOnWriteArrayList<>());
 		}
 	}
 
@@ -71,39 +73,50 @@ public class Log implements Serializable{
 	 * @param op
 	 * @return true if op is inserted, false otherwise.
 	 */
+
+
 	public synchronized boolean add(Operation op){
 		// Recuperar el ID del host
 		String hostId = op.getTimestamp().getHostid();
 		// Recuperar el log del host
-		List<Operation> operations = log.get(hostId);
+		// Obtener o inicializar la lista de operaciones para este host
+		CopyOnWriteArrayList<Operation> operationsList = log.computeIfAbsent(hostId, key -> new CopyOnWriteArrayList<>());
 
-		// Log no vacío, recupera última marca de tiempo
-		Timestamp lastTimestamp;
-		if (!operations.isEmpty())
-			lastTimestamp = operations.get(operations.size()-1).getTimestamp();
-		else
-			lastTimestamp = null;
-
-		// Comparar tiempo actual con la última entrada
-		// si son iguales
-		if (op.getTimestamp().compare(lastTimestamp)<0)
-			return false;
-		// Sino actualizo log
-		else {
-			log.get(hostId).add(op);
+		// Comparar si esta vacia o tiempo actual con la última entrada son iguales
+		if (operationsList.isEmpty() || operationsList.get(operationsList.size() - 1).getTimestamp().compare(op.getTimestamp()) < 0) {
+			operationsList.add(op);
 			return true;
 		}
+		return false;
 	}
 
-	
-	
+
+
 	/**
 	 * @param sum The sum of timestamps to compare against.
 	 * @return A list of operations that are newer than the given sum of timestamps.
 	 */
-	public  List<Operation> listNewer(TimestampVector sum){	
-		// return generated automatically. Remove it when implementing your solution 
-		return null;
+	public synchronized List<Operation> listNewer(TimestampVector partnerSummary) {
+		List<Operation> newOperations = new ArrayList<>();
+		// Iterar sobre las entradas del log (operaciones por host)
+		for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
+			String hostId = entry.getKey();
+			CopyOnWriteArrayList<Operation> hostOperationsList = entry.getValue();
+
+			// saltar operaciones vacias
+			if (hostOperationsList.isEmpty())
+				continue;
+
+			Timestamp lastSeenByPartner = partnerSummary.getLast(hostId);
+			// Filtrar y añadir solo las operaciones que el compañero no ha visto
+			for (Operation op : hostOperationsList) {
+				if (op.getTimestamp().compare(lastSeenByPartner) > 0) {
+					newOperations.add(op);
+				}
+			}
+		}
+
+		return newOperations;
 	}
 	
 	/**
@@ -114,27 +127,22 @@ public class Log implements Serializable{
 	 * @param ack: ackSummary.
 	 */
 	public void purgeLog(TimestampMatrix ack){
+		System.err.println("Error: purgeLog method (Log) not yet implemented");
 	}
 
 	/**
 	 * equals
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public synchronized boolean equals(Object obj) {
 		// Verificar de identidad y nulidad básica
 		if (this == obj) return true;
-		if (obj == null) return false;
-		if (getClass() != obj.getClass()) return false;
+		if (obj == null || getClass() != obj.getClass()) return false;
 
-		//  Casting seguro a la clase Log
 		Log other = (Log) obj;
-
 		// Comparar el mapa log de la instancia actual con el de la other
-		if (this.log == null) {
-            return other.log == null;
-		} else return this.log.equals(other.log);
-    }
-
+		return this.log.equals(other.log);
+	}
 
 
 
@@ -143,15 +151,17 @@ public class Log implements Serializable{
 	 */
 	@Override
 	public synchronized String toString() {
-		String name="";
-		for(Enumeration<List<Operation>> en=log.elements();
-		en.hasMoreElements(); ){
-		List<Operation> sublog=en.nextElement();
-		for(ListIterator<Operation> en2=sublog.listIterator(); en2.hasNext();){
-			name+=en2.next().toString()+"\n";
-		}
+			String name="";
+			for(Enumeration<CopyOnWriteArrayList<Operation>> en = log.elements();
+				en.hasMoreElements(); ){
+				List<Operation> sublog=en.nextElement();
+				for(ListIterator<Operation> en2=sublog.listIterator(); en2.hasNext();){
+					name+=en2.next().toString()+"\n";
+				}
+			}
+
+			return name;
 	}
-		
-		return name;
-	}
+
+
 }
