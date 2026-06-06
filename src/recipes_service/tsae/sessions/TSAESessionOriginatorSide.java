@@ -117,6 +117,7 @@ public class TSAESessionOriginatorSide extends TimerTask{
 				localSummary = this.serverData.getSummary().clone();
 				serverData.getAck().update(serverData.getId(), localSummary);
 				localAck = this.serverData.getAck().clone();
+				serverData.setCurrentSessionNumber(current_session_number);
 			}
 
 			// Send to partner: local's summary and ack
@@ -184,11 +185,14 @@ public class TSAESessionOriginatorSide extends TimerTask{
 				if (msg != null && msg.type() == MsgType.END_TSAE){
 					// Actualizar información (bloqueando serverData)
 					synchronized (serverData) {
+						LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] updated summary/ack and purge log/tombstones");
+						// Actualizar summary y acknowledgment local con datos del partner
 						serverData.getSummary().updateMax(partnerSummary);
 						serverData.getAck().updateMax(partnerAck);
 						serverData.getAck().update(serverData.getId(), serverData.getSummary());
-						// Purgar log
+						// Purgar log y tombstones
 						serverData.getLog().purgeLog(serverData.getAck());
+						serverData.purgeTombstones();
 					}
 				}
 			} else {

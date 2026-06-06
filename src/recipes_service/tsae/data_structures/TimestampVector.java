@@ -97,7 +97,7 @@ public class TimestampVector implements Serializable{
 	/**
 	 * Actualizar timestamp de un participant especifico
 	 */
-	public void update(String participant, Timestamp timestamp) {
+	public synchronized void update(String participant, Timestamp timestamp) {
 		if (participant == null || timestamp == null) {
 			return;
 		}

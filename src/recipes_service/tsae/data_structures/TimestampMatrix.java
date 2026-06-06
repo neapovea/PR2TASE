@@ -77,6 +77,7 @@ public class TimestampMatrix implements Serializable{
 	 */
 	public synchronized void update(String node, TimestampVector tsVector){
 		timestampMatrix.put(node, tsVector);
+
 	}
 	
 	/**
