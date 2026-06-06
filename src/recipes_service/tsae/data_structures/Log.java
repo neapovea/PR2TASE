@@ -155,7 +155,7 @@ public class Log implements Serializable{
 	 * @param timestamp the timestamp to check for.
 	 * @return true if the log contains an operation with the given timestamp, false otherwise.
 	 */
-	public boolean contains(Timestamp timestamp) {
+	public synchronized boolean contains(Timestamp timestamp) {
 		if (timestamp == null) {
 			return false; // Return false if timestamp is null
 		}

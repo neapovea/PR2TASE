@@ -97,10 +97,20 @@ public class ServerData {
 
 	public ServerData(){
 	}
-	
+
+	private int currentSessionNumber = -1;
+
+	public synchronized int getCurrentSessionNumber() {
+		return this.currentSessionNumber;
+	}
+
+	public synchronized void setCurrentSessionNumber(int currentSessionNumber) {
+		this.currentSessionNumber = currentSessionNumber;
+	}
+
 	/**
 	 * Starts the execution
-	 * @param participantss
+	 * @param participants
 	 */
 	public void startTSAE(Hosts participants){
 		this.participants = participants;
@@ -148,27 +158,40 @@ public class ServerData {
 
 		if (recipeTitle == null || recipe == null) {
 			LSimLogger.log(Level.WARN, "Invalid recipe input: title or content is null.");
+
 			return;
 		}
 
 		Timestamp timestamp = nextTimestamp();
 		Recipe rcpe = new Recipe(recipeTitle, recipe, id, timestamp);
-		Operation op = new AddOperation(rcpe, timestamp);
+		Operation addOps = new AddOperation(rcpe, timestamp);
+		//invocamos función para realizar las actualizaciones y operaciones necesarias
+		this.integrateOperation(addOps);
 
-		// actualizar las estructuras de datos del servidor
-		log.add(op);                        	// Añadir al log de mensajes para propagación
-		summary.updateTimestamp(timestamp); 	// Actualizar timestamp local del host
-		recipes.add(rcpe);                 		// Añadir Recipe
-
-		LSimLogger.log(Level.TRACE, "Recipe '" + recipeTitle + "' added to local storage and log.");
+		LSimLogger.log(Level.TRACE, "[ServerData] [session: "+this.currentSessionNumber+" ] Recipe " + recipeTitle + " added to local storage and log.");
 
 	}
-	
+
+	/**
+	 * Elimina receta por título
+	 * @param recipeTitle
+	 */
 	public synchronized void removeRecipe(String recipeTitle){
-		System.err.println("Error: removeRecipe method (serverData) not yet implemented");
+		Recipe removedRecipe = recipes.get(recipeTitle);
+		if (removedRecipe != null) {
+			Timestamp timestamp = nextTimestamp();
+			RemoveOperation removeOps = new RemoveOperation(recipeTitle, removedRecipe.getTimestamp(), timestamp);
+			// Esto sirve para recordar que la borramos y evitar que otro servidor nos la devuelva por error.
+			tombstones.add(removedRecipe.getTimestamp());
+			//invocamos función para realizar las actualizaciones y operaciones necesarias
+			this.integrateOperation(removeOps);
+			LSimLogger.log(Level.TRACE, "[ServerData] [session: "+this.currentSessionNumber+"  ] removeRecipe method: " + recipeTitle);
+		} else {
+			LSimLogger.log(Level.TRACE, "[ServerData] [session: "+this.currentSessionNumber+"  ] Try to remove null recipe: " + recipeTitle);
+		}
 	}
 
-	private synchronized void purgeTombstones() {
+	public synchronized void purgeTombstones() {
 		if (ack == null){
 			return;
 		}
@@ -273,22 +296,56 @@ public class ServerData {
 	 */
 
 	public synchronized void integrateOperation(Operation op) {
+		// Añadir al log de mensajes para propagación
 		boolean addedToLog = log.add(op);
+
+		Timestamp auxTimestamp = op.getTimestamp();
 
 		// Si la operación es nueva (se añadió al log) la procesamos
 		if (addedToLog) {
-			if (op instanceof AddOperation addOp) {
-				Recipe recipeData = addOp.getRecipe();
-				Recipe newRecipe = new Recipe(recipeData.getTitle(), recipeData.getRecipe(), recipeData.getAuthor(), recipeData.getTimestamp());
-				recipes.add(newRecipe);
-			} else if (op instanceof RemoveOperation removeOp) {
-				recipes.remove(removeOp.getRecipeTitle());
-			}
 			// Actualizar vector local para reflejar que conocemos esta novedad
 			summary.updateTimestamp(op.getTimestamp());
-			// Update the acknowledgment matrix with the current summary
+			// Actualizar ack con el sumary actual
 			ack.update(id, summary);
+			synchronized (tombstones) {
+				if (op instanceof AddOperation addOp) {
+					if (tombstones.contains(addOp.getRecipe().getTimestamp())) {
+						LSimLogger.log(Level.TRACE, "[ServerData] [session:  "+this.currentSessionNumber+" ] integrateOperation method: AddOperation ignored due to existing tombstone.");
+					} else {
+						Recipe recipeData = addOp.getRecipe();
+						Recipe newRecipe = new Recipe(recipeData.getTitle(), recipeData.getRecipe(), recipeData.getAuthor(), recipeData.getTimestamp());
+						// Agregar recepta
+						recipes.add(newRecipe);
+					}
+				} else if (op instanceof RemoveOperation removeOp) {
+					// Eliminar receta de nuestra lista local.
+					recipes.remove(removeOp.getRecipeTitle());
+					//Check if tombstone have the timestamp, if it have it then it get removed (as before in the Add secction)
+					if (!tombstones.contains(removeOp.getRecipeTimestamp())) {
+						tombstones.add(removeOp.getRecipeTimestamp());
+					}
+				}
+			}
 		}
+
+//		if (addedToLog) {
+//			// Actualizar vector local para reflejar que conocemos esta novedad
+//			summary.updateTimestamp(op.getTimestamp());
+//			// Actualizar ack con el sumary actual
+//			ack.update(id, summary);
+//
+//			if (op instanceof AddOperation addOp) {
+//				Recipe recipeData = addOp.getRecipe();
+//				Recipe newRecipe = new Recipe(recipeData.getTitle(), recipeData.getRecipe(), recipeData.getAuthor(), recipeData.getTimestamp());
+//				// Agregar recepta
+//				recipes.add(newRecipe);
+//			} else if (op instanceof RemoveOperation removeOp) {
+//				// Eliminar receta de nuestra lista local.
+//				recipes.remove(removeOp.getRecipeTitle());
+//			}
+//		}
+		LSimLogger.log(Level.TRACE, "[ServerData] [session:  "+this.currentSessionNumber+" ] integrateOperation method: " + op.toString());
+
 	}
 
 }

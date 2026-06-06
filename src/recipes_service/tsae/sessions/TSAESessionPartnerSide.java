@@ -100,6 +100,7 @@ public class TSAESessionPartnerSide extends Thread{
 				// Sincronizar bloqueando serverData
 				synchronized(serverData) {
 					missingOps = serverData.getLog().listNewer(originator.getSummary());
+					serverData.setCurrentSessionNumber(current_session_number);
 				}
 
 	            // send operations
@@ -142,13 +143,13 @@ public class TSAESessionPartnerSide extends Thread{
 						for (Operation op : incomingOps) {
 							// integrateOperation actualiza: log, BBDD y timestamp
 							serverData.integrateOperation(op);
-						}						
-						
+						}
+						LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: " + current_session_number + "] updated summary/ack and purge log/tombstones");
 						serverData.getSummary().updateMax(originator.getSummary());
 						serverData.getAck().updateMax(originator.getAck());
-						//serverData.getAck().update(serverData.getId(), serverData.getSummary());
 						// Purgar log
 						serverData.getLog().purgeLog(serverData.getAck());
+						serverData.purgeTombstones();
 
 					}
 				}
