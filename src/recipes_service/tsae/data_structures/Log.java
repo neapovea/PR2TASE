@@ -130,16 +130,16 @@ public class Log implements Serializable{
 
 		if (ack == null) return;
 
-		// Get minimum timestamp vector from ack matrix
+		// Obtener el vector de marcas de tiempo mínimo de la matriz de confirmaciones (ack)
 		TimestampVector minTimestampVector = ack.minTimestampVector();
 		if (minTimestampVector == null) return;
 
-		// For each host's operation list in the log
+		// Procesar cada operación de cada host en el registro (log)
 		for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
 			String hostId = entry.getKey();
 			CopyOnWriteArrayList<Operation> operations = entry.getValue();
 
-			// Remove operations that have been acknowledged by all participants
+			// Eliminar las operaciones que han sido confirmadas por todos los participantes
 			operations.removeIf(op -> {
 				String opHostId = op.getTimestamp().getHostid();
 				Timestamp minAck = minTimestampVector.getLast(opHostId);
@@ -160,16 +160,16 @@ public class Log implements Serializable{
 			return false; // Return false if timestamp is null
 		}
 
-		// Iterate over each host's operation list in the log
+		// Para cada operacion de cada host en el registro (log)
 		for (CopyOnWriteArrayList<Operation> operations : log.values()) {
-			// Check if any operation matches the given timestamp
+			// Comprobar si alguna operación coincide con la marca de tiempo proporcionada
 			for (Operation operation : operations) {
 				if (operation.getTimestamp().equals(timestamp)) {
-					return true; // Return true if a match is found
+					return true; // Devuelve true si se encuentra una coincidencia
 				}
 			}
 		}
-		return false; // Return false if no match is found
+		return false; // Devuelve false si no se encuentra ninguna coincidencia
 	}
 
 	/**

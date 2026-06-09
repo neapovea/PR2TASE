@@ -142,6 +142,7 @@ public class TSAESessionOriginatorSide extends TimerTask{
 
 			// Registrar operaciones de manera atómica (bloqueando serverData)
 			synchronized (serverData) {
+				// Registrar en log y actualizar timestamps de los ops recibidos.
 				for(Operation op : incomingOps) {
 					serverData.integrateOperation(op,true);
 				}
