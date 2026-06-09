@@ -182,7 +182,6 @@ public class TimestampVector implements Serializable{
 		if (obj == null) return false;
 		if (getClass() != obj.getClass()) return false;
 
-		//  Casting seguro a la clase Log
 		TimestampVector other = (TimestampVector) obj;
 		
 		// Comparar el mapa log de la instancia actual con el de la other

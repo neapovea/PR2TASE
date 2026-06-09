@@ -139,12 +139,13 @@ public class TSAESessionPartnerSide extends Thread{
 
 					// Synchronize to avoid interference between threads
 					synchronized(serverData){
-						// Al igual que el Originator, el Partner también necesita registrar en log y actualizar timestamps de los ops recibidos.
+						// Registrar en log y actualizar timestamps de los ops recibidos.
 						for (Operation op : incomingOps) {
 							// integrateOperation actualiza: log, BBDD y timestamp
 							serverData.integrateOperation(op,true);
 						}
 						LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: " + current_session_number + "] updated summary/ack and purge log/tombstones");
+						// Actualizar summary y acknowledgment local con datos del originator
 						serverData.getSummary().updateMax(originator.getSummary());
 						serverData.getAck().updateMax(originator.getAck());
 						// Purgar log

@@ -199,12 +199,14 @@ public class ServerData {
 
 		List<Timestamp> newTombstones = new Vector<Timestamp>();
 		for(int i=0; i<tombstones.size(); i++){
+			// Extraer el último tiempo confirmado para el host de este tombstone
 			if (tombstones.get(i).compare(sum.getLast(tombstones.get(i).getHostid()))>0){
+				// Si el tombstone es más nuevo que el tiempo confirmado, lo conservamos
 				newTombstones.add(tombstones.get(i));
 			}
 		}
+		// Actualizamos la referencia a la lista purgada
 		tombstones = newTombstones;
-
 	}
 
 
@@ -322,7 +324,7 @@ public class ServerData {
 				} else if (op instanceof RemoveOperation removeOp) {
 					// Eliminar receta de nuestra lista local.
 					recipes.remove(removeOp.getRecipeTitle());
-					//Check if tombstone have the timestamp, if it have it then it get removed (as before in the Add secction)
+					// Verificar si el tombstone contiene la marca de tiempo; en caso afirmativo, se elimina
 					if (!tombstones.contains(removeOp.getRecipeTimestamp())) {
 						tombstones.add(removeOp.getRecipeTimestamp());
 					}
@@ -330,22 +332,6 @@ public class ServerData {
 			}
 		}
 
-//		if (addedToLog) {
-//			// Actualizar vector local para reflejar que conocemos esta novedad
-//			summary.updateTimestamp(op.getTimestamp());
-//			// Actualizar ack con el sumary actual
-//			ack.update(id, summary);
-//
-//			if (op instanceof AddOperation addOp) {
-//				Recipe recipeData = addOp.getRecipe();
-//				Recipe newRecipe = new Recipe(recipeData.getTitle(), recipeData.getRecipe(), recipeData.getAuthor(), recipeData.getTimestamp());
-//				// Agregar recepta
-//				recipes.add(newRecipe);
-//			} else if (op instanceof RemoveOperation removeOp) {
-//				// Eliminar receta de nuestra lista local.
-//				recipes.remove(removeOp.getRecipeTitle());
-//			}
-//		}
 		LSimLogger.log(Level.TRACE, "[ServerData] [session:  "+this.currentSessionNumber+" ] integrateOperation method: " + op.toString());
 
 	}

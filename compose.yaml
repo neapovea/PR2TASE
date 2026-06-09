@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  test_tsae:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: testtsae:latest
+    
+    # Variables de entorno
+    environment:
+      - TZ=Europe/Madrid
+      - OPCION_TEST=1
+      - CANTIDAD_NODOS=10
+      
+    # Volúmenes locales
+    volumes:
+      - ./resultados_exportados:/app/salida_host:rw

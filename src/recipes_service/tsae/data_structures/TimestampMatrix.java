@@ -56,16 +56,16 @@ public class TimestampMatrix implements Serializable{
 	 * @param tsMatrix
 	 */
 	public synchronized void updateMax(TimestampMatrix tsMatrix){
-		// For each node in the matrix being merged
+		// Para cada nodo en la matriz que se está fusionando
 		for (String node : tsMatrix.timestampMatrix.keySet()) {
-			// Get or create timestamp vector for this node
+			// Obtener o crear el vector de marcas de tiempo para este nodo
 			TimestampVector currentVector = timestampMatrix.get(node);
 			if (currentVector == null) {
 				currentVector = new TimestampVector(new ArrayList<>(timestampMatrix.keySet()));
 				timestampMatrix.put(node, currentVector);
 			}
 
-			// Update with max values from other matrix's vector
+			// Actualizar con los valores máximos del vector de la otra matriz
 			currentVector.updateMax(tsMatrix.getTimestampVector(node));
 		}
 	}
